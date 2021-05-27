@@ -9,7 +9,7 @@ WIDTH = 400
 HEIGHT = 300
 """ params ↓"""
 EPSILON = 1.0
-THRESHOLD = 70
+THRESHOLD = 30
 
 
 # 이미지를 로드
@@ -31,17 +31,21 @@ for y in range(0, height):
 # R 배열을 채워주자.
 result = np.zeros((height, width, 3), dtype=np.uint8)
 check = np.full((height, width), 1)
+current_mode = np.zeros(5)
 done = True
 data = []
 for y in range(height):
     for x in range(width):
         if done:
             current_mode = features[y][x]
+            print(f'Y0 = {current_mode}')
 
         # 나와 같은 무리일 것 같은 친구들을 먼저 고른다.
         window = []
         for i in range(height):
             for j in range(width):
+                #if check[i][j] == 0:
+                    #continue
                 # 현재 모드와 주변 픽셀 간의 특성거리를 구한다.
                 feature_dist = 0
                 for f in range(5):
@@ -51,6 +55,7 @@ for y in range(height):
                 # 쓰레쉬 홀딩을 통과했다면, 배열에 입력해준다.
                 if feature_dist < THRESHOLD:
                     window.append([i, j])
+                print(f'Data selected = {len(window)}')
 
         mean_R = 0
         mean_G = 0
@@ -97,36 +102,14 @@ for y in range(height):
             # 다음 mode의 좌표를 최대한 근사시켜 입력하자.
             for coord in window:
                 i, j = coord
-                result[int(features[i][j][3])][int(features[i][j][4])] = np.array([mean_R, mean_G, mean_B])
+                result[i][j] = np.array([mean_R, mean_G, mean_B])
                 # 이제 한 번 사용한 것은 사용하지 말자.
                 check[i][j] = 0
-
-            current_mean_random = True
-            new_D = np.zeros((len(features), 5))
-            counter_i = 0
-
-            for i in range(0, len(features)):
-                if features[i][0] != -1:
-                    new_D[counter_i][0] = features[i][0]
-                    new_D[counter_i][1] = features[i][1]
-                    new_D[counter_i][2] = features[i][2]
-                    new_D[counter_i][3] = features[i][3]
-                    new_D[counter_i][4] = features[i][4]
-                    counter_i += 1
-
-            features = np.zeros((counter_i, 5))
-            counter_i -= 1
-            for i in range(0, counter_i):
-                features[i][0] = new_D[i][0]
-                features[i][1] = new_D[i][1]
-                features[i][2] = new_D[i][2]
-                features[i][3] = new_D[i][3]
-                features[i][4] = new_D[i][4]
+            done = True
 
         # 아직 움직일 수 있다면, 모드를 옮겨주자
         else:
-            current_mean_random = False
-
+            done = False
             current_mode[0] = mean_R
             current_mode[1] = mean_G
             current_mode[2] = mean_B
@@ -135,8 +118,8 @@ for y in range(height):
 
         # if(len(total_array) >= 40000:
             # break
-np.save('mean_shifted', R)
+#np.save('mean_shifted', result)
 cv2.imshow("originImage", img)
-cv2.imshow("finalImage", R)
-cv2.imwrite(f'R{THRESHOLD}-E{EPSILON}.png', R)
+cv2.imshow("finalImage", result)
+# cv2.imwrite(f'R{THRESHOLD}-E{EPSILON}.png', R)
 cv2.waitKey()
